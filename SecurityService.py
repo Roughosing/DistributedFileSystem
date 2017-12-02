@@ -15,6 +15,10 @@ db = sql.connect('database.db')
 cursor = db.cursor()
 
 
+def get_database():
+    return db
+
+
 # encrypt the data according to the key using Vigenere cipher
 def encrypt(data, key):
     enc = ''
@@ -98,6 +102,6 @@ def authenticate():
 
 
 
-if __name__ == '__main__':
+if __name__=='__main__':
     createDB()
     app.run(port=8001)
