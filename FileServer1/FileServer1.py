@@ -26,14 +26,17 @@ def read_file(filename):
         content = file.read()
     except:
         return {'Error:': 'File Not Found.'}, status.HTTP_404_NOT_FOUND
-    return {'filename': filename, 'file_content': content}
+    return {'filename': filename, 'file_content': content, 'server_port': '8007'}
 
 
 @app.route('/write', methods=['POST'])
-def write_file(filename, new_content):
+def write_file():
+    updated_file = request.json
+    filename = updated_file['filename']
     try:
-        file = open(os.path.join(file_path, filename), 'wb')
-        file.write(new_content)
+        new_content = updated_file['file_content']
+        file = open(os.path.join(file_path, filename), "wb+")
+        file.write(new_content.encode())
     except:
         return {'Error:': 'File Not Found.'}, status.HTTP_404_NOT_FOUND
     return {'filename': filename, 'message': 'File successfully written.'}

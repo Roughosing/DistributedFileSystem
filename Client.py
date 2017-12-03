@@ -6,16 +6,14 @@ import sys
 
 commands = ["READ", "WRITE", "HELP", "QUIT", "FIND"]
 
-file_server_url = 'http://127.0.0.1:800'
-
+ss_url = 'http://127.0.0.1:8001/'
+ds_url = 'http://127.0.0.1:8002/'
 
 def get_help():
     return print("The possible commands are: ", commands)
 
 
 def main():
-    ss_url = 'http://127.0.0.1:8001/'
-    ds_url = 'http://127.0.0.1:8002/'
 
     # user login, each new client will be asked to log on, their details will then be stored in the SS database
     userId = input("Please Enter Username: ")
@@ -61,16 +59,16 @@ def main():
             opened_files, msg = close(opened_files, filename)
             print(msg)
 
-
         elif "READ" in cmd:
             filename = cmd.split()[1]
             file = read(opened_files, filename)
             print(file)
 
-
         elif "WRITE" in cmd:
             filename = cmd.split()[1]
-            content = cmd.split()
+            content = cmd.split(' ', 2)[2]
+            msg = write(opened_files, filename, content)
+            print(msg)
 
         else:
             print("Please provide correct commands, for more information on the commands, type HELP"
@@ -84,11 +82,20 @@ def read(opened_files, filename):
     return "Error: No file of such name is opened."
 
 
+def write(opened_files, filename, content):
+    for file in opened_files:
+        if file['filename'] == filename:
+            file['file_content'] = content
+            updated_file = requests.post(ds_url+"write", json=file)
+            return updated_file.text
+    return "Error: No file of such name is opened."
+
+
 def close(opened_files, filename):
     for file in opened_files:
         if file['filename'] == filename:
             opened_files.remove(file)
-            return opened_files, "File successfully removed."
+            return opened_files, "File successfully closed."
     return opened_files, "Error: No file of such name is opened."
 
 

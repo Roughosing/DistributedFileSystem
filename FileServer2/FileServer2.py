@@ -19,14 +19,14 @@ def find_file(filename):
     return {'Server: ': SERVER_NAME,'file_path': '/'+file_path}
 
 
-@app.route('/read/<filename>', methods=['GET'])
+@app.route('/open/<filename>', methods=['GET'])
 def read_file(filename):
     try:
         file = open(os.path.join(file_path, filename))
         content = file.read()
     except:
         return {'Error:': 'File Not Found.'}, status.HTTP_404_NOT_FOUND
-    return {'filename': filename, 'file_content': content}
+    return {'filename': filename, 'file_content': content, 'server_port': '8008'}
 
 
 
