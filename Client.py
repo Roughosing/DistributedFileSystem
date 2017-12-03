@@ -6,6 +6,8 @@ import sys
 
 commands = ["READ", "WRITE", "HELP", "QUIT", "FIND"]
 
+file_server_url = 'http://127.0.0.1:800'
+
 
 def get_help():
     return print("The possible commands are: ", commands)
@@ -31,7 +33,7 @@ def main():
     decToken = json.loads(ss.decrypt(base64.urlsafe_b64decode(encToken).decode(), userPassword))
     print(decToken)
 
-
+    opened_files = []
     connected = True
     print("For a list of all possible commands, type HELP.")
     while connected:
@@ -46,17 +48,48 @@ def main():
 
         elif "FIND" in cmd:
             filename = cmd.split()[1]
-            read_file = requests.get(ds_url+"find/"+filename)
+            read_file = requests.get(ds_url+"get_directory/"+filename)
             print(read_file.text)
+
+        elif "OPEN" in cmd:
+            filename = cmd.split()[1]
+            open_file = requests.get(ds_url + "open/" + filename)
+            opened_files.append(open_file.json())
+
+        elif "CLOSE" in cmd:
+            filename = cmd.split()[1]
+            opened_files, msg = close(opened_files, filename)
+            print(msg)
+
 
         elif "READ" in cmd:
             filename = cmd.split()[1]
-            read_file = requests.get(ds_url + "read/" + filename)
-            print(read_file.text)
+            file = read(opened_files, filename)
+            print(file)
+
+
+        elif "WRITE" in cmd:
+            filename = cmd.split()[1]
+            content = cmd.split()
 
         else:
             print("Please provide correct commands, for more information on the commands, type HELP"
                   "\nMake sure to include file extensions in name (i.e. .txt etc)")
+
+
+def read(opened_files, filename):
+    for file in opened_files:
+        if file['filename'] == filename:
+            return file['file_content']
+    return "Error: No file of such name is opened."
+
+
+def close(opened_files, filename):
+    for file in opened_files:
+        if file['filename'] == filename:
+            opened_files.remove(file)
+            return opened_files, "File successfully removed."
+    return opened_files, "Error: No file of such name is opened."
 
 
 if __name__ == "__main__":

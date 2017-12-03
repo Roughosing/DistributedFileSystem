@@ -11,15 +11,15 @@ file_path = 'files/'
 
 
 @app.route('/find/<filename>', methods=['GET'])
-def find_file(filename):
+def open_file(filename):
     try:
-        file = open(os.path.join(file_path, filename))
+        open(os.path.join(file_path, filename))
     except:
         return {'Error:': 'File Not Found.'}, status.HTTP_404_NOT_FOUND
     return {'Server: ': SERVER_NAME,'file_path': '/'+file_path}
 
 
-@app.route('/read/<filename>', methods=['GET'])
+@app.route('/open/<filename>', methods=['GET'])
 def read_file(filename):
     try:
         file = open(os.path.join(file_path, filename))
@@ -27,6 +27,16 @@ def read_file(filename):
     except:
         return {'Error:': 'File Not Found.'}, status.HTTP_404_NOT_FOUND
     return {'filename': filename, 'file_content': content}
+
+
+@app.route('/write', methods=['POST'])
+def write_file(filename, new_content):
+    try:
+        file = open(os.path.join(file_path, filename), 'wb')
+        file.write(new_content)
+    except:
+        return {'Error:': 'File Not Found.'}, status.HTTP_404_NOT_FOUND
+    return {'filename': filename, 'message': 'File successfully written.'}
 
 
 
