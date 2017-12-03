@@ -4,7 +4,7 @@ import json
 import requests
 import sys
 
-commands = ["READ", "WRITE", "HELP", "QUIT"]
+commands = ["READ", "WRITE", "HELP", "QUIT", "FIND"]
 
 
 def get_help():
@@ -22,7 +22,7 @@ def main():
     encId = base64.urlsafe_b64encode(ss.encrypt(userId, userPassword).encode()).decode()
 
     print('Accessing Security Service')
-    authDirJson = {'user_id': userId, 'password': userPassword, 'encrypted_id': encId, 'server_id': 'Directory'}
+    authDirJson = {'user_id': userId, 'password': userPassword, 'encrypted_id': encId, 'server_id': 'File Server 1'}
     print('Sending', authDirJson)
 
 
@@ -44,9 +44,14 @@ def main():
             print("Goodbye!")
             sys.exit()
 
+        elif "FIND" in cmd:
+            filename = cmd.split()[1]
+            read_file = requests.get(ds_url+"find/"+filename)
+            print(read_file.text)
+
         elif "READ" in cmd:
             filename = cmd.split()[1]
-            read_file = requests.get(ds_url+"read/"+filename)
+            read_file = requests.get(ds_url + "read/" + filename)
             print(read_file.text)
 
         else:

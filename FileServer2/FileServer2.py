@@ -6,7 +6,7 @@ import os
 
 app = FlaskAPI(__name__)
 
-SERVER_NAME = 'File Server 1'
+SERVER_NAME = 'File Server 2'
 file_path = 'files/'
 
 
@@ -31,4 +31,4 @@ def read_file(filename):
 
 
 if __name__=='__main__':
-    app.run(port=8007)
+    app.run(port=8008)

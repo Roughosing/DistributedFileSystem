@@ -1,7 +1,7 @@
 from flask import request
 from flask_api import FlaskAPI
-import sqlite3 as sql
 
+import sqlite3 as sql
 import base64
 import random
 import json
