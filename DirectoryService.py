@@ -12,9 +12,8 @@ file_server_url = 'http://127.0.0.1:'
 @app.route('/get_directory/<filename>', methods=['GET'])
 def get_directory(filename):
     for n in [8007, 8008]:
-        server_url = file_server_url+str(n)+"/"+"find/"+filename
+        server_url = file_server_url + str(n) + "/find/" + filename
         in_directory = requests.get(server_url)
-        print(in_directory.text)
         status_code = in_directory.status_code
         if status_code == 200:
             return in_directory.json()
@@ -24,9 +23,8 @@ def get_directory(filename):
 @app.route('/open/<filename>', methods=['GET'])
 def read_file(filename):
     for n in [8007, 8008]:
-        server_url = file_server_url+str(n)+"/"+"open/"+filename
+        server_url = file_server_url + str(n) + "/open/" + filename
         in_directory = requests.get(server_url)
-        print(in_directory.text)
         status_code = in_directory.status_code
         if status_code == 200:
             return in_directory.json()
@@ -36,13 +34,23 @@ def read_file(filename):
 @app.route('/write', methods=['POST'])
 def write_file():
     file = request.json
-    server_url = file_server_url + file['server_port'] + "/" + "write"
+    server_url = file_server_url + file['server_port'] + "/write"
     write = requests.post(server_url, json=file)
-    print(write.text)
     status_code = write.status_code
     if status_code == 200:
         return "File successfully upated."
     return 'Error: Unknown Error.'
+
+
+@app.route('/add', methods=['POST'])
+def add_file():
+    file = request.json
+    for n in [8007, 8008]:
+        server_name = requests.get(file_server_url + str(n) + "/name")
+        if server_name.text == file['filepath']:
+            post = requests.post(file_server_url + str(n) + "/add", json=file)
+            return post.text
+    return 'Error: No such server exists.'
 
 
 if __name__=='__main__':

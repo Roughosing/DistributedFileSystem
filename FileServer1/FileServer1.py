@@ -42,6 +42,23 @@ def write_file():
     return {'filename': filename, 'message': 'File successfully written.'}
 
 
+@app.route('/add', methods=['POST'])
+def add_file():
+    new_file = request.json
+    try:
+        open(os.path.join(file_path, new_file['filename']))
+        return 'File already exists in this directory.'
+    except:
+        file = open(os.path.join(file_path, new_file['filename']), "wb")
+        file.write(str("This file "+new_file['filename']).encode())
+        file.close()
+        return 'File succesfully added.'
+
+@app.route('/name', methods=['GET'])
+def get_server_name():
+    return SERVER_NAME
+
+
 
 if __name__=='__main__':
     app.run(port=8007)

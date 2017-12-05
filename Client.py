@@ -4,7 +4,8 @@ import json
 import requests
 import sys
 
-commands = ["READ", "WRITE", "HELP", "QUIT", "FIND"]
+commands = ["FIND <filename>", "OPEN <filename>", "CLOSE <filename>", "READ <filename>",
+            "WRITE <filename> <updated content>", "ADD <filename> <file server>", "HELP", "QUIT"]
 
 ss_url = 'http://127.0.0.1:8001/'
 ds_url = 'http://127.0.0.1:8002/'
@@ -51,8 +52,8 @@ def main():
 
         elif "OPEN" in cmd:
             filename = cmd.split()[1]
-            open_file = requests.get(ds_url + "open/" + filename)
-            opened_files.append(open_file.json())
+            opened_files, msg = open(opened_files, filename)
+            print(msg)
 
         elif "CLOSE" in cmd:
             filename = cmd.split()[1]
@@ -66,13 +67,42 @@ def main():
 
         elif "WRITE" in cmd:
             filename = cmd.split()[1]
-            content = cmd.split(' ', 2)[2]
-            msg = write(opened_files, filename, content)
-            print(msg)
+            if len(cmd.split()) > 2:
+                content = cmd.split(' ', 2)[2]
+                msg = write(opened_files, filename, content)
+                print(msg)
+            else:
+                print('WRITE requires two arguments, <filename> and  <updated content>')
+
+        elif "ADD" in cmd:
+            filename = cmd.split()[1]
+            if len(cmd.split()) > 2 :
+                filepath = cmd.split(' ', 2)[2]
+                msg = add(filename, filepath)
+                print(msg)
+            else:
+                print('ADD requires two arguments, <filename> and  <file server>')
 
         else:
             print("Please provide correct commands, for more information on the commands, type HELP"
                   "\nMake sure to include file extensions in name (i.e. .txt etc)")
+
+
+def open(opened_files, filename):
+    for file in opened_files:
+        if file['filename'] == filename:
+            return opened_files, 'File already opened.'
+    open_file = requests.get(ds_url + "open/" + filename)
+    opened_files.append(open_file.json())
+    return opened_files, 'File successfully opened.'
+
+
+def close(opened_files, filename):
+    for file in opened_files:
+        if file['filename'] == filename:
+            opened_files.remove(file)
+            return opened_files, "File successfully closed."
+    return opened_files, "Error: No file of such name is opened."
 
 
 def read(opened_files, filename):
@@ -91,12 +121,10 @@ def write(opened_files, filename, content):
     return "Error: No file of such name is opened."
 
 
-def close(opened_files, filename):
-    for file in opened_files:
-        if file['filename'] == filename:
-            opened_files.remove(file)
-            return opened_files, "File successfully closed."
-    return opened_files, "Error: No file of such name is opened."
+def add(filename, filepath):
+    file = {'filename': filename, 'filepath': filepath}
+    post = requests.post(ds_url+"add", json=file)
+    return post.text
 
 
 if __name__ == "__main__":
