@@ -1,4 +1,4 @@
-from flask_api import FlaskAPI
+from flask_api import FlaskAPI, status
 from flask import request
 import requests
 import SecurityService as ss
@@ -20,15 +20,18 @@ def get_directory(filename):
     return {'Error:': 'File does not exist amongst servers.'}
 
 
-@app.route('/open/<filename>', methods=['GET'])
-def read_file(filename):
+@app.route('/open', methods=['GET'])
+def open_file():
+    file = request.args.to_dict()
     for n in [8007, 8008]:
-        server_url = file_server_url + str(n) + "/open/" + filename
+        server_url = file_server_url + str(n) + "/open?" + 'filename='+file['filename'] + '&userId='+file['userId']
         in_directory = requests.get(server_url)
         status_code = in_directory.status_code
         if status_code == 200:
             return in_directory.json()
-    return {'Error:': 'File does not exist amongst servers.'}
+        elif status_code == 409:
+            return {'Error:': 'File is already locked.'}, status.HTTP_404_NOT_FOUND
+    return {'Error:': 'File does not exist amongst servers.'}, status.HTTP_404_NOT_FOUND
 
 
 @app.route('/write', methods=['POST'])

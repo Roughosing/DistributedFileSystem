@@ -4,11 +4,12 @@ import json
 import requests
 import sys
 
-commands = ["FIND <filename>", "OPEN <filename>", "CLOSE <filename>", "READ <filename>",
-            "WRITE <filename> <updated content>", "ADD <filename> <file server>", "HELP", "QUIT"]
+commands = "FIND <filename> \n OPEN <filename> \n CLOSE <filename> \n READ <filename> \n CHECK <filename> \
+           \n WRITE <filename> <updated content> \n ADD <filename> <file server> \n LIST \n HELP \n QUIT"
 
 ss_url = 'http://127.0.0.1:8001/'
 ds_url = 'http://127.0.0.1:8002/'
+ls_url = 'http://127.0.0.1:8003/'
 
 def get_help():
     return print("The possible commands are: ", commands)
@@ -52,7 +53,7 @@ def main():
 
         elif "OPEN" in cmd:
             filename = cmd.split()[1]
-            opened_files, msg = open(opened_files, filename)
+            opened_files, msg = open(opened_files, filename, userId)
             print(msg)
 
         elif "CLOSE" in cmd:
@@ -83,16 +84,29 @@ def main():
             else:
                 print('ADD requires two arguments, <filename> and  <file server>')
 
+        elif "LIST" in cmd:
+            if len(opened_files) > 1:
+                print(opened_files)
+            else:
+                print("No files opened.")
+
+        elif "CHECK" in cmd:
+            filename = cmd.split()[1]
+            check = requests.get(ls_url+"check/"+filename)
+            print(check.text)
+
         else:
             print("Please provide correct commands, for more information on the commands, type HELP"
                   "\nMake sure to include file extensions in name (i.e. .txt etc)")
 
 
-def open(opened_files, filename):
+def open(opened_files, filename, userId):
     for file in opened_files:
         if file['filename'] == filename:
             return opened_files, 'File already opened.'
-    open_file = requests.get(ds_url + "open/" + filename)
+    open_file = requests.get(ds_url + "open?" + 'filename='+filename + '&userId='+userId)
+    if open_file.status_code != 200:
+        return opened_files, open_file.text.strip('{}')
     opened_files.append(open_file.json())
     return opened_files, 'File successfully opened.'
 
@@ -100,6 +114,7 @@ def open(opened_files, filename):
 def close(opened_files, filename):
     for file in opened_files:
         if file['filename'] == filename:
+            close = requests.post(ls_url+"unlock", json=file)
             opened_files.remove(file)
             return opened_files, "File successfully closed."
     return opened_files, "Error: No file of such name is opened."

@@ -1,5 +1,6 @@
 from flask_api import FlaskAPI, status
 from flask import request
+import requests
 import base64
 import json
 import os
@@ -7,11 +8,13 @@ import os
 app = FlaskAPI(__name__)
 
 SERVER_NAME = 'File Server 2'
+server_key = 'server_1_key'
 file_path = 'files/'
+lock_server = 'http://127.0.0.1:8003/lock'
 
 
 @app.route('/find/<filename>', methods=['GET'])
-def open_file(filename):
+def find_file(filename):
     try:
         open(os.path.join(file_path, filename))
     except:
@@ -19,14 +22,19 @@ def open_file(filename):
     return {'Server: ': SERVER_NAME,'file_path': '/'+file_path}
 
 
-@app.route('/open/<filename>', methods=['GET'])
-def read_file(filename):
+@app.route('/open', methods=['GET'])
+def open_file():
+    file = request.args.to_dict()
     try:
-        file = open(os.path.join(file_path, filename))
-        content = file.read()
+        opened_file = open(os.path.join(file_path, file['filename']))
+        is_locked = requests.post(lock_server, json=file)
+        if is_locked.text == 'true':
+            return {'Error:': 'File is already locked'}, status.HTTP_409_CONFLICT
+        else:
+            content = opened_file.read()
+            return {'filename': file['filename'], 'file_content': content, 'server_port': '8008'}
     except:
         return {'Error:': 'File Not Found.'}, status.HTTP_404_NOT_FOUND
-    return {'filename': filename, 'file_content': content, 'server_port': '8008'}
 
 
 @app.route('/write', methods=['POST'])
