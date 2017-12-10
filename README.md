@@ -6,9 +6,9 @@ Distributed File System for Internet Applications CS4400 -- Gregory Penrose 1431
 Features impleneted in this project:
 
 * Distributed Transparent File Access
-        * Security Service
-        * Directory Service
-        * Lock Service
-        * Caching
-        * Replication
+* Security Service
+* Directory Service
+* Lock Service
+* Caching
+* Replication
         
