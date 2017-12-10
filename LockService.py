@@ -1,14 +1,12 @@
 from flask_api import FlaskAPI
-from flask import request
+from flask import request, json
+import SecurityService as ss
 import base64
-import json
-
 
 app = FlaskAPI(__name__)
 
-
 locked_files = []
-
+server_key = 'lock_key_1'
 
 @app.route('/lock', methods=['POST'])
 def lock():
@@ -22,7 +20,10 @@ def lock():
 
 @app.route('/unlock', methods=['POST'])
 def unlock():
-    new_file = request.json
+    encRequest = request.json
+    ticket = encRequest['ticket']
+    sessKey = ss.decrypt(base64.urlsafe_b64decode(ticket).decode(), server_key)
+    new_file = json.loads(ss.decrypt(encRequest['file'], sessKey))
     for file in locked_files:
         if file['filename'] == new_file['filename']:
             locked_files.remove(file)

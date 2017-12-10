@@ -1,18 +1,13 @@
 import SecurityService as ss
-import base64
-import json
-import requests
-import sys
+import base64, json, requests, sys
 
-commands = "FIND <filename> \n OPEN <filename> \n CLOSE <filename> \n READ <filename> \n CHECK <filename> \
-           \n WRITE <filename> <updated content> \n ADD <filename> <file server> \n LIST \n HELP \n QUIT"
+
+commands = "FIND <filename> \n OPEN <filename> \n CLOSE <filename> \n READ <filename> \n WRITE <filename> <new content> \
+           \n CHECK <filename> \n ADD <filename> <file server> \n LIST \n HELP \n QUIT"
 
 ss_url = 'http://127.0.0.1:8001/'
 ds_url = 'http://127.0.0.1:8002/'
 ls_url = 'http://127.0.0.1:8003/'
-
-def get_help():
-    return print("The possible commands are: ", commands)
 
 
 def main():
@@ -24,14 +19,19 @@ def main():
     encId = base64.urlsafe_b64encode(ss.encrypt(userId, userPassword).encode()).decode()
 
     print('Accessing Security Service')
-    authDirJson = {'user_id': userId, 'password': userPassword, 'encrypted_id': encId, 'server_id': 'File Server 1'}
-    print('Sending', authDirJson)
+    authDirJson = {'user_id': userId, 'password': userPassword, 'encrypted_id': encId, 'server_id': 'directory_key_1'}
+    authLockJson = {'user_id': userId, 'password': userPassword, 'encrypted_id': encId, 'server_id': 'lock_key_1'}
 
 
-    authReq = requests.post(ss_url+'auth', json=authDirJson)
-    encToken = authReq.json()['token']
-    decToken = json.loads(ss.decrypt(base64.urlsafe_b64decode(encToken).decode(), userPassword))
-    print(decToken)
+    dir_req = requests.post(ss_url+'auth', json=authDirJson)
+    enc_dir_token = dir_req.json()['token']
+    dec_dir_token = json.loads(ss.decrypt(base64.urlsafe_b64decode(enc_dir_token).decode(), userPassword))
+    print(dec_dir_token)
+
+    lock_req = requests.post(ss_url+'auth', json=authLockJson)
+    enc_lock_token = lock_req.json()['token']
+    dec_lock_token = json.loads(ss.decrypt(base64.urlsafe_b64decode(enc_lock_token).decode(), userPassword))
+    print(dec_lock_token)
 
     opened_files = []
     connected = True
@@ -44,7 +44,7 @@ def main():
 
         elif cmd == "QUIT":
             print("Goodbye!")
-            sys.exit()
+            quit(opened_files, dec_lock_token)
 
         elif "FIND" in cmd:
             filename = cmd.split()[1]
@@ -53,12 +53,12 @@ def main():
 
         elif "OPEN" in cmd:
             filename = cmd.split()[1]
-            opened_files, msg = open(opened_files, filename, userId)
+            opened_files, msg = open(opened_files, filename, userId, dec_dir_token)
             print(msg)
 
         elif "CLOSE" in cmd:
             filename = cmd.split()[1]
-            opened_files, msg = close(opened_files, filename)
+            opened_files, msg = close(opened_files, filename, dec_lock_token)
             print(msg)
 
         elif "READ" in cmd:
@@ -70,7 +70,7 @@ def main():
             filename = cmd.split()[1]
             if len(cmd.split()) > 2:
                 content = cmd.split(' ', 2)[2]
-                msg = write(opened_files, filename, content)
+                msg = write(opened_files, filename, content, dec_dir_token)
                 print(msg)
             else:
                 print('WRITE requires two arguments, <filename> and  <updated content>')
@@ -79,13 +79,13 @@ def main():
             filename = cmd.split()[1]
             if len(cmd.split()) > 2 :
                 filepath = cmd.split(' ', 2)[2]
-                msg = add(filename, filepath)
+                msg = add(filename, filepath, dec_dir_token)
                 print(msg)
             else:
                 print('ADD requires two arguments, <filename> and  <file server>')
 
         elif "LIST" in cmd:
-            if len(opened_files) > 1:
+            if len(opened_files) > 0:
                 print(opened_files)
             else:
                 print("No files opened.")
@@ -100,24 +100,42 @@ def main():
                   "\nMake sure to include file extensions in name (i.e. .txt etc)")
 
 
-def open(opened_files, filename, userId):
+def get_help():
+    return print("The possible commands are: ", commands)
+
+
+def open(opened_files, filename, userId, token):
     for file in opened_files:
         if file['filename'] == filename:
             return opened_files, 'File already opened.'
-    open_file = requests.get(ds_url + "open?" + 'filename='+filename + '&userId='+userId)
+    sessKey = token['session_key']
+    file = {'filename': filename, 'userId': userId}
+    open_json = {'file': ss.encrypt(json.dumps(file), sessKey), 'ticket': token['ticket']}
+    open_file = requests.post(ds_url + "open", json=open_json)
     if open_file.status_code != 200:
         return opened_files, open_file.text.strip('{}')
     opened_files.append(open_file.json())
     return opened_files, 'File successfully opened.'
 
 
-def close(opened_files, filename):
+def close(opened_files, filename, token):
     for file in opened_files:
         if file['filename'] == filename:
-            close = requests.post(ls_url+"unlock", json=file)
+            sessKey = token['session_key']
+            close_json = {'file': ss.encrypt(json.dumps(file), sessKey), 'ticket': token['ticket']}
+            close = requests.post(ls_url+"unlock", json=close_json)
             opened_files.remove(file)
             return opened_files, "File successfully closed."
     return opened_files, "Error: No file of such name is opened."
+
+
+def quit(opened_files, token):
+    for file in opened_files:
+        sessKey = token['session_key']
+        close_json = {'file': ss.encrypt(json.dumps(file), sessKey), 'ticket': token['ticket']}
+        close = requests.post(ls_url+"unlock", json=close_json)
+        opened_files.remove(file)
+    sys.exit()
 
 
 def read(opened_files, filename):
@@ -127,18 +145,22 @@ def read(opened_files, filename):
     return "Error: No file of such name is opened."
 
 
-def write(opened_files, filename, content):
+def write(opened_files, filename, content, token):
     for file in opened_files:
         if file['filename'] == filename:
+            sessKey = token['session_key']
             file['file_content'] = content
-            updated_file = requests.post(ds_url+"write", json=file)
+            open_json = {'file': ss.encrypt(json.dumps(file), sessKey), 'ticket': token['ticket']}
+            updated_file = requests.post(ds_url+"write", json=open_json)
             return updated_file.text
     return "Error: No file of such name is opened."
 
 
-def add(filename, filepath):
+def add(filename, filepath, token):
+    sessKey = token['session_key']
     file = {'filename': filename, 'filepath': filepath}
-    post = requests.post(ds_url+"add", json=file)
+    add_json = {'file': ss.encrypt(json.dumps(file), sessKey), 'ticket': token['ticket']}
+    post = requests.post(ds_url+"add", json=add_json)
     return post.text
 
 

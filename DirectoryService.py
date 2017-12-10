@@ -1,12 +1,12 @@
 from flask_api import FlaskAPI, status
 from flask import request
-import requests
+import requests, copy, json, base64
 import SecurityService as ss
 
 app = FlaskAPI(__name__)
 
-
 file_server_url = 'http://127.0.0.1:'
+server_key = 'directory_key_1'
 
 
 @app.route('/get_directory/<filename>', methods=['GET'])
@@ -20,9 +20,12 @@ def get_directory(filename):
     return {'Error:': 'File does not exist amongst servers.'}
 
 
-@app.route('/open', methods=['GET'])
+@app.route('/open', methods=['POST'])
 def open_file():
-    file = request.args.to_dict()
+    encRequest = request.json
+    ticket = encRequest['ticket']
+    sessKey = ss.decrypt(base64.urlsafe_b64decode(ticket).decode(), server_key)
+    file = json.loads(ss.decrypt(encRequest['file'], sessKey))
     for n in [8007, 8008]:
         server_url = file_server_url + str(n) + "/open?" + 'filename='+file['filename'] + '&userId='+file['userId']
         in_directory = requests.get(server_url)
@@ -36,23 +39,48 @@ def open_file():
 
 @app.route('/write', methods=['POST'])
 def write_file():
-    file = request.json
-    server_url = file_server_url + file['server_port'] + "/write"
-    write = requests.post(server_url, json=file)
-    status_code = write.status_code
+    encRequest = request.json
+    ticket = encRequest['ticket']
+    sessKey = ss.decrypt(base64.urlsafe_b64decode(ticket).decode(), server_key)
+    file = json.loads(ss.decrypt(encRequest['file'], sessKey))
+    status_code = 0
+    for n in [8007, 8008]:
+        if str(n) == file['server_port']:
+            print(file)
+            server_url = file_server_url + str(n) + "/write"
+            write = requests.post(server_url, json=file)
+            status_code = write.status_code
+        else:
+            server_url = file_server_url + str(n) + "/write"
+            backup = copy.copy(file)
+            backup['filename'] = str(file['filename']).split('.')[0] + "_backup.txt"
+            backup['server_port'] = str(n)
+            print(backup)
+            write_backup = requests.post(server_url, json=backup)
     if status_code == 200:
-        return "File successfully upated."
+       return "File successfully upated."
     return 'Error: Unknown Error.'
 
 
 @app.route('/add', methods=['POST'])
 def add_file():
-    file = request.json
+    encRequest = request.json
+    ticket = encRequest['ticket']
+    sessKey = ss.decrypt(base64.urlsafe_b64decode(ticket).decode(), server_key)
+    file = json.loads(ss.decrypt(encRequest['file'], sessKey))
+    status_code = 0
     for n in [8007, 8008]:
         server_name = requests.get(file_server_url + str(n) + "/name")
         if server_name.text == file['filepath']:
-            post = requests.post(file_server_url + str(n) + "/add", json=file)
-            return post.text
+            add_file = requests.post(file_server_url + str(n) + "/add", json=file)
+            status_code = add_file.status_code
+        else:
+            backup = copy.copy(file)
+            backup['filename'] = str(file['filename']).split('.')[0] + "_backup.txt"
+            backup['server_port'] = str(n)
+            add_file = requests.post(file_server_url + str(n) + "/add", json=backup)
+    if status_code == 200:
+        return add_file.text
     return 'Error: No such server exists.'
 
 

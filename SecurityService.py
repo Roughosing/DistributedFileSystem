@@ -2,14 +2,9 @@ from flask import request
 from flask_api import FlaskAPI
 
 import sqlite3 as sql
-import base64
-import random
-import json
-import string
-
+import base64, random, json, string
 
 app = FlaskAPI(__name__)
-
 
 db = sql.connect('database.db')
 cursor = db.cursor()
@@ -93,7 +88,7 @@ def authenticate():
             return {'error': 'No server with this key exists'}
         sessKey = generateKey(16)
         encSessKey = encrypt(sessKey, key)
-        encSessKey = base64.b64encode(encSessKey.encode()).decode()
+        encSessKey = base64.urlsafe_b64encode(encSessKey.encode()).decode()
         token = {'ticket': encSessKey, 'session_key': sessKey, 'server_id': server_id, 'timeout': 200 }
         encToken = base64.urlsafe_b64encode(encrypt(json.dumps(token), getPassword(user_id)).encode())
         return {'token': encToken.decode()}

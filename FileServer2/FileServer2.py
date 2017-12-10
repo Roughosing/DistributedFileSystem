@@ -1,9 +1,6 @@
 from flask_api import FlaskAPI, status
 from flask import request
-import requests
-import base64
-import json
-import os
+import requests, os
 
 app = FlaskAPI(__name__)
 
@@ -58,7 +55,7 @@ def add_file():
         return 'File already exists in this directory.'
     except:
         file = open(os.path.join(file_path, new_file['filename']), "wb")
-        file.write(str("This file "+new_file['filename']).encode())
+        file.write(str("This is file "+new_file['filename']).encode())
         file.close()
         return 'File succesfully added.'
 

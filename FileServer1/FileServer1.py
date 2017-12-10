@@ -1,9 +1,6 @@
 from flask_api import FlaskAPI, status
 from flask import request
-import requests
-import base64
-import json
-import os
+import requests, os
 
 app = FlaskAPI(__name__)
 
@@ -60,7 +57,7 @@ def add_file():
         file = open(os.path.join(file_path, new_file['filename']), "wb")
         file.write(str("This is file "+new_file['filename']).encode())
         file.close()
-        return 'File succesfully added.'
+        return 'File successfully added.'
 
 
 @app.route('/name', methods=['GET'])
