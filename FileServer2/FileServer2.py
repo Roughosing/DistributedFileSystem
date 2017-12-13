@@ -4,8 +4,7 @@ import requests, os
 
 app = FlaskAPI(__name__)
 
-SERVER_NAME = 'File Server 2'
-server_key = 'server_1_key'
+server_name = 'File Server 2'
 file_path = 'files/'
 lock_server = 'http://127.0.0.1:8003/lock'
 
@@ -16,7 +15,7 @@ def find_file(filename):
         open(os.path.join(file_path, filename))
     except:
         return {'Error:': 'File Not Found.'}, status.HTTP_404_NOT_FOUND
-    return {'Server: ': SERVER_NAME,'file_path': '/'+file_path}
+    return {'Server: ': server_name,'file_path': '/'+file_path}
 
 
 @app.route('/open', methods=['GET'])
@@ -29,7 +28,7 @@ def open_file():
             return {'Error:': 'File is already locked'}, status.HTTP_409_CONFLICT
         else:
             content = opened_file.read()
-            return {'filename': file['filename'], 'file_content': content, 'server_port': '8008'}
+            return {'filename': file['filename'], 'file_content': content, 'server_port': '8007'}
     except:
         return {'Error:': 'File Not Found.'}, status.HTTP_404_NOT_FOUND
 
@@ -57,12 +56,12 @@ def add_file():
         file = open(os.path.join(file_path, new_file['filename']), "wb")
         file.write(str("This is file "+new_file['filename']).encode())
         file.close()
-        return 'File succesfully added.'
+        return 'File successfully added.'
 
 
 @app.route('/name', methods=['GET'])
 def get_server_name():
-    return SERVER_NAME
+    return server_name
 
 
 if __name__=='__main__':

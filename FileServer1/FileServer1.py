@@ -5,7 +5,6 @@ import requests, os
 app = FlaskAPI(__name__)
 
 server_name = 'File Server 1'
-server_key = 'server_1_key'
 file_path = 'files/'
 lock_server = 'http://127.0.0.1:8003/lock'
 
